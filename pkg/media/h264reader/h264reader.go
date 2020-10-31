@@ -9,12 +9,12 @@ import (
 	"strconv"
 )
 
-// H264Reader 111
+// H264Reader reads data from stream and constructs h264 nal units
 type H264Reader struct {
 	stream io.Reader
 }
 
-//NewReader sfds
+// NewReader creates new H264Reader
 func NewReader(in io.Reader) (*H264Reader, error) {
 	if in == nil {
 		return nil, fmt.Errorf("stream is nil")
@@ -27,21 +27,71 @@ func NewReader(in io.Reader) (*H264Reader, error) {
 	return reader, nil
 }
 
-////////////////////////////////////////////////////////////
+// NAL H.264 Network Abstraction Layer
+type NAL struct {
+	PictureOrderCount uint32
 
-type FindNalState struct {
+	// NAL header
+	ForbiddenZeroBit bool
+	RefIdc           uint8
+	UnitType         nalUnitType
+
+	Data []byte // header byte + rbsp
+}
+
+// ReadFrames reads all data from stream and returns array of all parsed nal units
+func (reader *H264Reader) ReadFrames() []NAL {
+
+	nalsBytes := make([][]byte, 0)
+	nalStream := newFindNalState()
+	for {
+		buf := make([]byte, 1024)
+		n, err := reader.stream.Read(buf)
+		if err != nil && err != io.EOF {
+			log.Fatal("Error Reading: ", err)
+			break
+		}
+		if n == 0 {
+			break
+		}
+		nal := nalStream.NalScan(buf[0:n])
+		nalsBytes = append(nalsBytes, nal...)
+	}
+
+	i := 0
+	var nals []NAL
+	for {
+		if i >= len(nalsBytes) {
+			break
+		}
+		nalData := nalsBytes[i]
+		i = i + 1
+		nal := newNal()
+		nal.parseHeader(nalData[0])
+		if nal.UnitType == sei {
+			continue
+		}
+		nal.Data = nalData
+		nals = append(nals, nal)
+	}
+	return nals
+}
+
+// Implementation
+
+type findNalState struct {
 	PrefixCount   int
 	LastNullCount int
 	buf           []byte
 }
 
-func NewFindNalState() FindNalState {
-	return FindNalState{PrefixCount: 0, LastNullCount: 0, buf: make([]byte, 0)}
+func newFindNalState() findNalState {
+	return findNalState{PrefixCount: 0, LastNullCount: 0, buf: make([]byte, 0)}
 }
 
-func (h *FindNalState) NalScan(data []byte) [][]byte {
+func (h *findNalState) NalScan(data []byte) [][]byte {
 	if len(h.buf) > 1024*1024 {
-		panic("FindNalState buf len panic")
+		panic("findNalState buf len panic")
 	}
 	nals := make([][]byte, 0)
 
@@ -62,12 +112,12 @@ func (h *FindNalState) NalScan(data []byte) [][]byte {
 			break
 		}
 		b := data[i]
-		i += 1
+		i++
 		switch b {
 		case 0x00:
 			{
 				if h.LastNullCount < 3 {
-					h.LastNullCount += 1
+					h.LastNullCount++
 				}
 				continue
 			}
@@ -106,7 +156,7 @@ func (h *FindNalState) NalScan(data []byte) [][]byte {
 					}
 					p := prefixOffset
 					lastPrefixOffset = &p
-					h.PrefixCount += 1
+					h.PrefixCount++
 				}
 			}
 		default:
@@ -116,91 +166,91 @@ func (h *FindNalState) NalScan(data []byte) [][]byte {
 	return nals
 }
 
-type NalUnitType uint8
+type nalUnitType uint8
 
 const ( //   Table 7-1 NAL unit type codes
-	Unspecified              NalUnitType = 0  // Unspecified
-	CodedSliceNonIdr         NalUnitType = 1  // Coded slice of a non-IDR picture
-	CodedSliceDataPartitionA NalUnitType = 2  // Coded slice data partition A
-	CodedSliceDataPartitionB NalUnitType = 3  // Coded slice data partition B
-	CodedSliceDataPartitionC NalUnitType = 4  // Coded slice data partition C
-	CodedSliceIdr            NalUnitType = 5  // Coded slice of an IDR picture
-	SEI                      NalUnitType = 6  // Supplemental enhancement information (SEI)
-	SPS                      NalUnitType = 7  // Sequence parameter set
-	PPS                      NalUnitType = 8  // Picture parameter set
-	AUD                      NalUnitType = 9  // Access unit delimiter
-	EndOfSequence            NalUnitType = 10 // End of sequence
-	EndOfStream              NalUnitType = 11 // End of stream
-	Filler                   NalUnitType = 12 // Filler data
-	SpsExt                   NalUnitType = 13 // Sequence parameter set extension
+	unspecified              nalUnitType = 0  // unspecified
+	codedSliceNonIdr         nalUnitType = 1  // Coded slice of a non-IDR picture
+	codedSliceDataPartitionA nalUnitType = 2  // Coded slice data partition A
+	codedSliceDataPartitionB nalUnitType = 3  // Coded slice data partition B
+	codedSliceDataPartitionC nalUnitType = 4  // Coded slice data partition C
+	codedSliceIdr            nalUnitType = 5  // Coded slice of an IDR picture
+	sei                      nalUnitType = 6  // Supplemental enhancement information (sei)
+	sps                      nalUnitType = 7  // Sequence parameter set
+	pps                      nalUnitType = 8  // Picture parameter set
+	aud                      nalUnitType = 9  // Access unit delimiter
+	endOfSequence            nalUnitType = 10 // End of sequence
+	endOfStream              nalUnitType = 11 // End of stream
+	filler                   nalUnitType = 12 // filler data
+	spsExt                   nalUnitType = 13 // Sequence parameter set extension
 	// 14..18           // Reserved
-	NalUnitTypeCodedSliceAux NalUnitType = 19 // Coded slice of an auxiliary coded picture without partitioning
+	nalUnitTypeCodedSliceAux nalUnitType = 19 // Coded slice of an auxiliary coded picture without partitioning
 	// 20..23           // Reserved
-	// 24..31           // Unspecified
+	// 24..31           // unspecified
 )
 
-func NalUnitTypeStr(v NalUnitType) string {
+func nalUnitTypeStr(v nalUnitType) string {
 	str := "Unknown"
 	switch v {
 	case 0:
 		{
-			str = "Unspecified"
+			str = "unspecified"
 		}
 	case 1:
 		{
-			str = "CodedSliceNonIdr"
+			str = "codedSliceNonIdr"
 		}
 	case 2:
 		{
-			str = "CodedSliceDataPartitionA"
+			str = "codedSliceDataPartitionA"
 		}
 	case 3:
 		{
-			str = "CodedSliceDataPartitionB"
+			str = "codedSliceDataPartitionB"
 		}
 	case 4:
 		{
-			str = "CodedSliceDataPartitionC"
+			str = "codedSliceDataPartitionC"
 		}
 	case 5:
 		{
-			str = "CodedSliceIdr"
+			str = "codedSliceIdr"
 		}
 	case 6:
 		{
-			str = "SEI"
+			str = "sei"
 		}
 	case 7:
 		{
-			str = "SPS"
+			str = "sps"
 		}
 	case 8:
 		{
-			str = "PPS"
+			str = "pps"
 		}
 	case 9:
 		{
-			str = "AUD"
+			str = "aud"
 		}
 	case 10:
 		{
-			str = "EndOfSequence"
+			str = "endOfSequence"
 		}
 	case 11:
 		{
-			str = "EndOfStream"
+			str = "endOfStream"
 		}
 	case 12:
 		{
-			str = "Filler"
+			str = "filler"
 		}
 	case 13:
 		{
-			str = "SpsExt"
+			str = "spsExt"
 		}
 	case 19:
 		{
-			str = "NalUnitTypeCodedSliceAux"
+			str = "nalUnitTypeCodedSliceAux"
 		}
 	default:
 		{
@@ -211,59 +261,12 @@ func NalUnitTypeStr(v NalUnitType) string {
 	return str
 }
 
-type Nal struct {
-	PictureOrderCount uint32
-
-	// NAL header
-	ForbiddenZeroBit bool
-	RefIdc           uint8
-	UnitType         NalUnitType
-
-	Data []byte // header byte + rbsp
+func newNal() NAL {
+	return NAL{PictureOrderCount: 0, ForbiddenZeroBit: false, RefIdc: 0, UnitType: unspecified, Data: make([]byte, 0)}
 }
 
-func NewNal() Nal {
-	return Nal{PictureOrderCount: 0, ForbiddenZeroBit: false, RefIdc: 0, UnitType: Unspecified, Data: make([]byte, 0)}
-}
-func (h *Nal) ParseHeader(firstByte byte) {
+func (h *NAL) parseHeader(firstByte byte) {
 	h.ForbiddenZeroBit = (((firstByte & 0x80) >> 7) == 1) // 0x80 = 0b10000000
 	h.RefIdc = (firstByte & 0x60) >> 5                    // 0x60 = 0b01100000
-	h.UnitType = NalUnitType((firstByte & 0x1F) >> 0)     // 0x1F = 0b00011111
-}
-
-func (reader *H264Reader) ReadFrames() []Nal {
-
-	nalsBytes := make([][]byte, 0)
-	nalStream := NewFindNalState()
-	for {
-		buf := make([]byte, 1024)
-		n, err := reader.stream.Read(buf)
-		if err != nil && err != io.EOF {
-			log.Fatal("Error Reading: ", err)
-			break
-		}
-		if n == 0 {
-			break
-		}
-		nal := nalStream.NalScan(buf[0:n])
-		nalsBytes = append(nalsBytes, nal...)
-	}
-
-	i := 0
-	var nals []Nal
-	for {
-		if i >= len(nalsBytes) {
-			break
-		}
-		nalData := nalsBytes[i]
-		i = i + 1
-		nal := NewNal()
-		nal.ParseHeader(nalData[0])
-		if nal.UnitType == SEI {
-			continue
-		}
-		nal.Data = nalData
-		nals = append(nals, nal)
-	}
-	return nals
+	h.UnitType = nalUnitType((firstByte & 0x1F) >> 0)     // 0x1F = 0b00011111
 }
