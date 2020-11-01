@@ -68,7 +68,7 @@ func (reader *H264Reader) ReadFrames() []NAL {
 		i = i + 1
 		nal := newNal()
 		nal.parseHeader(nalData[0])
-		if nal.UnitType == SEI {
+		if nal.UnitType == NalUnitTypeSEI {
 			continue
 		}
 		nal.Data = nalData
@@ -239,7 +239,7 @@ func NalUnitTypeStr(v NalUnitType) string {
 }
 
 func newNal() NAL {
-	return NAL{PictureOrderCount: 0, ForbiddenZeroBit: false, RefIdc: 0, UnitType: Unspecified, Data: make([]byte, 0)}
+	return NAL{PictureOrderCount: 0, ForbiddenZeroBit: false, RefIdc: 0, UnitType: NalUnitTypeUnspecified, Data: make([]byte, 0)}
 }
 
 func (h *NAL) parseHeader(firstByte byte) {
