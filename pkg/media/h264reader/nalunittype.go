@@ -29,69 +29,37 @@ func (n *NalUnitType) String() string {
 	var str string
 	switch *n {
 	case 0:
-		{
-			str = "Unspecified"
-		}
+		str = "Unspecified"
 	case 1:
-		{
-			str = "CodedSliceNonIdr"
-		}
+		str = "CodedSliceNonIdr"
 	case 2:
-		{
-			str = "CodedSliceDataPartitionA"
-		}
+		str = "CodedSliceDataPartitionA"
 	case 3:
-		{
-			str = "CodedSliceDataPartitionB"
-		}
+		str = "CodedSliceDataPartitionB"
 	case 4:
-		{
-			str = "CodedSliceDataPartitionC"
-		}
+		str = "CodedSliceDataPartitionC"
 	case 5:
-		{
-			str = "CodedSliceIdr"
-		}
+		str = "CodedSliceIdr"
 	case 6:
-		{
-			str = "SEI"
-		}
+		str = "SEI"
 	case 7:
-		{
-			str = "SPS"
-		}
+		str = "SPS"
 	case 8:
-		{
-			str = "PPS"
-		}
+		str = "PPS"
 	case 9:
-		{
-			str = "AUD"
-		}
+		str = "AUD"
 	case 10:
-		{
-			str = "EndOfSequence"
-		}
+		str = "EndOfSequence"
 	case 11:
-		{
-			str = "EndOfStream"
-		}
+		str = "EndOfStream"
 	case 12:
-		{
-			str = "Filler"
-		}
+		str = "Filler"
 	case 13:
-		{
-			str = "SpsExt"
-		}
+		str = "SpsExt"
 	case 19:
-		{
-			str = "NalUnitTypeCodedSliceAux"
-		}
+		str = "NalUnitTypeCodedSliceAux"
 	default:
-		{
-			str = "Unknown"
-		}
+		str = "Unknown"
 	}
 	str = str + "(" + strconv.FormatInt(int64(*n), 10) + ")"
 	return str
