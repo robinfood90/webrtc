@@ -89,8 +89,10 @@ func newFindNalState() findNalState {
 	return findNalState{PrefixCount: 0, LastNullCount: 0, buf: make([]byte, 0)}
 }
 
-func (h *findNalState) NalScan(data []byte) [][]byte {
+func (h *findNalState) NalScan(data []byte) [][]byte { //nolint:gocognit
 	if len(h.buf) > 1024*1024 {
+		// nolint:godox
+		// TODO: remove panic
 		panic("findNalState buf len panic")
 	}
 	nals := make([][]byte, 0)
