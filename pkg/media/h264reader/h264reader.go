@@ -6,7 +6,6 @@ import (
 	"errors"
 	"io"
 	"log"
-	"strconv"
 )
 
 // H264Reader reads data from stream and constructs h264 nal units
@@ -164,78 +163,6 @@ func (h *findNalState) NalScan(data []byte) [][]byte {
 		h.LastNullCount = 0
 	}
 	return nals
-}
-
-func NalUnitTypeStr(v NalUnitType) string {
-	var str string
-	switch v {
-	case 0:
-		{
-			str = "Unspecified"
-		}
-	case 1:
-		{
-			str = "CodedSliceNonIdr"
-		}
-	case 2:
-		{
-			str = "CodedSliceDataPartitionA"
-		}
-	case 3:
-		{
-			str = "CodedSliceDataPartitionB"
-		}
-	case 4:
-		{
-			str = "CodedSliceDataPartitionC"
-		}
-	case 5:
-		{
-			str = "CodedSliceIdr"
-		}
-	case 6:
-		{
-			str = "SEI"
-		}
-	case 7:
-		{
-			str = "SPS"
-		}
-	case 8:
-		{
-			str = "PPS"
-		}
-	case 9:
-		{
-			str = "AUD"
-		}
-	case 10:
-		{
-			str = "EndOfSequence"
-		}
-	case 11:
-		{
-			str = "EndOfStream"
-		}
-	case 12:
-		{
-			str = "Filler"
-		}
-	case 13:
-		{
-			str = "SpsExt"
-		}
-	case 19:
-		{
-			str = "NalUnitTypeCodedSliceAux"
-		}
-	default:
-		{
-			str = "Unknown"
-		}
-	}
-	str = str + "(" + strconv.FormatInt(int64(v), 10) + ")"
-	return str
 }
 
 func newNal() NAL {
