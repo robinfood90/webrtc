@@ -3,7 +3,7 @@
 package h264reader
 
 import (
-	"fmt"
+	"errors"
 	"io"
 	"log"
 	"strconv"
@@ -14,10 +14,12 @@ type H264Reader struct {
 	stream io.Reader
 }
 
+var errNilReader = errors.New("stream is nil")
+
 // NewReader creates new H264Reader
 func NewReader(in io.Reader) (*H264Reader, error) {
 	if in == nil {
-		return nil, fmt.Errorf("stream is nil")
+		return nil, errNilReader
 	}
 
 	reader := &H264Reader{
@@ -41,7 +43,6 @@ type NAL struct {
 
 // ReadFrames reads all data from stream and returns array of all parsed nal units
 func (reader *H264Reader) ReadFrames() []NAL {
-
 	nalsBytes := make([][]byte, 0)
 	nalStream := newFindNalState()
 	for {
@@ -65,7 +66,7 @@ func (reader *H264Reader) ReadFrames() []NAL {
 			break
 		}
 		nalData := nalsBytes[i]
-		i = i + 1
+		i++
 		nal := newNal()
 		nal.parseHeader(nalData[0])
 		if nal.UnitType == NalUnitTypeSEI {
@@ -124,7 +125,6 @@ func (h *findNalState) NalScan(data []byte) [][]byte {
 		case 0x01:
 			{
 				if h.LastNullCount >= 2 { // found a NAL prefix 0x00_00_01 or 0x00_00_00_01
-
 					prefixOffset := i
 					if lastPrefixOffset != nil {
 						// NAL is a part of data from the end of the last prefix to the beginning of the current prefix. Save it
@@ -167,7 +167,7 @@ func (h *findNalState) NalScan(data []byte) [][]byte {
 }
 
 func NalUnitTypeStr(v NalUnitType) string {
-	str := "Unknown"
+	var str string
 	switch v {
 	case 0:
 		{
