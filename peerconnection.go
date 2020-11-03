@@ -2246,9 +2246,3 @@ func (pc *PeerConnection) setGatherCompleteHandler(handler func()) {
 func (pc *PeerConnection) SCTP() *SCTPTransport {
 	return pc.sctpTransport
 }
-
-// DTLS returns the currently-configured *DTLSTransport or nil
-// if one has not yet been configured
-func (pc *PeerConnection) DTLS() *DTLSTransport {
-	return pc.dtlsTransport
-}
